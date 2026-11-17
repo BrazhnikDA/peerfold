@@ -144,6 +144,15 @@ function fixtureSnapshot(): Snapshot {
         pairingCode: "105774",
         waiting: true,
       },
+      {
+        deviceId: "aa11bb22cc33",
+        name: "Гостевой",
+        online: true,
+        trusted: false,
+        mutual: false,
+        pairingCode: "330198",
+        waiting: false,
+      },
     ],
     shares: [
       {
@@ -898,7 +907,7 @@ function renderPeer(peer: Peer): HTMLElement {
   card.className = "card peer";
 
   const dot = document.createElement("span");
-  dot.className = peer.online ? "dot is-online" : "dot";
+  dot.className = peer.online ? "dot is-online" : "dot is-offline";
   dot.setAttribute("aria-hidden", "true");
 
   const main = document.createElement("div");

@@ -40,6 +40,18 @@ fn set_unix(path: &std::path::Path, secs: u64) {
     let _ = SystemTime::now();
 }
 
+#[test]
+fn device_name_trims_and_limits_characters() {
+    let node = node(temp_dir("name"));
+    assert!(node.set_name("   ").is_err());
+    let long = "я".repeat(65);
+    assert!(node.set_name(&long).is_err());
+    node.set_name(&"я".repeat(64)).unwrap();
+    assert_eq!(node.snapshot().device_name.chars().count(), 64);
+    node.set_name("  Ноутбук  ").unwrap();
+    assert_eq!(node.snapshot().device_name, "Ноутбук");
+}
+
 fn wait_until(mut check: impl FnMut() -> bool) {
     let start = Instant::now();
     while start.elapsed() < Duration::from_secs(10) {

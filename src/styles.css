@@ -328,16 +328,21 @@ input:focus-visible {
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
-  margin-top: 6px;
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
   border-radius: 50%;
-  background: var(--muted);
   flex: none;
 }
 
 .dot.is-online {
-  background: var(--online);
+  background: #16d35a;
+  box-shadow: 0 0 0 4px color-mix(in srgb, #16d35a 38%, transparent);
+}
+
+.dot.is-offline {
+  background: #ff2d2d;
+  box-shadow: 0 0 0 4px color-mix(in srgb, #ff2d2d 34%, transparent);
 }
 
 .code {

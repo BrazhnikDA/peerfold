@@ -2,55 +2,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use peerfold_core::Node;
-use serde::Deserialize;
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 
 struct Quit(AtomicBool);
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct NameArgs {
-    name: String,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct PausedArgs {
-    paused: bool,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct DeviceArgs {
-    device_id: String,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct PathArgs {
-    path: String,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct AttachArgs {
-    share_id: String,
-    path: String,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ShareArgs {
-    share_id: String,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct RestoreArgs {
-    share_id: String,
-    rel_path: String,
-    hash: String,
-}
 
 #[tauri::command]
 fn state(node: State<'_, Node>) -> peerfold_core::Snapshot {
@@ -58,62 +12,62 @@ fn state(node: State<'_, Node>) -> peerfold_core::Snapshot {
 }
 
 #[tauri::command]
-fn set_name(args: NameArgs, node: State<'_, Node>) -> Result<(), String> {
-    node.set_name(&args.name).map_err(|err| err.to_string())
+fn set_name(name: String, node: State<'_, Node>) -> Result<(), String> {
+    node.set_name(&name).map_err(|err| err.to_string())
 }
 
 #[tauri::command]
-fn set_paused(args: PausedArgs, node: State<'_, Node>) -> Result<(), String> {
-    node.set_paused(args.paused).map_err(|err| err.to_string())
+fn set_paused(paused: bool, node: State<'_, Node>) -> Result<(), String> {
+    node.set_paused(paused).map_err(|err| err.to_string())
 }
 
 #[tauri::command]
-fn trust(args: DeviceArgs, node: State<'_, Node>) -> Result<(), String> {
-    node.trust(&args.device_id).map_err(|err| err.to_string())
+fn trust(device_id: String, node: State<'_, Node>) -> Result<(), String> {
+    node.trust(&device_id).map_err(|err| err.to_string())
 }
 
 #[tauri::command]
-fn reject(args: DeviceArgs, node: State<'_, Node>) -> Result<(), String> {
-    node.reject(&args.device_id).map_err(|err| err.to_string())
+fn reject(device_id: String, node: State<'_, Node>) -> Result<(), String> {
+    node.reject(&device_id).map_err(|err| err.to_string())
 }
 
 #[tauri::command]
-fn forget(args: DeviceArgs, node: State<'_, Node>) -> Result<(), String> {
-    node.forget(&args.device_id).map_err(|err| err.to_string())
+fn forget(device_id: String, node: State<'_, Node>) -> Result<(), String> {
+    node.forget(&device_id).map_err(|err| err.to_string())
 }
 
 #[tauri::command]
-fn create_share(args: PathArgs, node: State<'_, Node>) -> Result<(), String> {
-    node.create_share(std::path::Path::new(&args.path))
+fn create_share(path: String, node: State<'_, Node>) -> Result<(), String> {
+    node.create_share(std::path::Path::new(&path))
         .map(|_| ())
         .map_err(|err| err.to_string())
 }
 
 #[tauri::command]
-fn attach_share(args: AttachArgs, node: State<'_, Node>) -> Result<(), String> {
-    node.attach_share(&args.share_id, std::path::Path::new(&args.path))
+fn attach_share(share_id: String, path: String, node: State<'_, Node>) -> Result<(), String> {
+    node.attach_share(&share_id, std::path::Path::new(&path))
         .map(|_| ())
         .map_err(|err| err.to_string())
 }
 
 #[tauri::command]
-fn remove_share(args: ShareArgs, node: State<'_, Node>) -> Result<(), String> {
-    node.remove_share(&args.share_id).map_err(|err| err.to_string())
+fn remove_share(share_id: String, node: State<'_, Node>) -> Result<(), String> {
+    node.remove_share(&share_id).map_err(|err| err.to_string())
 }
 
 #[tauri::command]
-fn rescan(args: ShareArgs, node: State<'_, Node>) -> Result<(), String> {
-    node.rescan(&args.share_id).map_err(|err| err.to_string())
+fn rescan(share_id: String, node: State<'_, Node>) -> Result<(), String> {
+    node.rescan(&share_id).map_err(|err| err.to_string())
 }
 
 #[tauri::command]
-fn versions(args: ShareArgs, node: State<'_, Node>) -> Result<Vec<peerfold_core::VersionInfo>, String> {
-    node.versions(&args.share_id).map_err(|err| err.to_string())
+fn versions(share_id: String, node: State<'_, Node>) -> Result<Vec<peerfold_core::VersionInfo>, String> {
+    node.versions(&share_id).map_err(|err| err.to_string())
 }
 
 #[tauri::command]
-fn restore(args: RestoreArgs, node: State<'_, Node>) -> Result<(), String> {
-    node.restore(&args.share_id, &args.rel_path, &args.hash)
+fn restore(share_id: String, rel_path: String, hash: String, node: State<'_, Node>) -> Result<(), String> {
+    node.restore(&share_id, &rel_path, &hash)
         .map_err(|err| err.to_string())
 }
 

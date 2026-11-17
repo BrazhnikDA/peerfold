@@ -2740,7 +2740,7 @@ dependencies = [
 
 [[package]]
 name = "peerfold"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "peerfold-core",
  "serde",
@@ -2753,7 +2753,7 @@ dependencies = [
 
 [[package]]
 name = "peerfold-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "blake3",
  "ed25519-dalek",

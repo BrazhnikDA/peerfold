@@ -63,6 +63,9 @@ pub fn scan_share(
     writing: &HashSet<String>,
 ) -> Result<Vec<WireFile>> {
     let root = PathBuf::from(&share.path);
+    if !root.is_dir() {
+        return Ok(Vec::new());
+    }
     let mut seen = HashSet::new();
     let mut changed = Vec::new();
     let old_map: HashMap<String, FileRec> = store

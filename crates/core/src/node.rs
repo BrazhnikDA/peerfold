@@ -138,7 +138,8 @@ impl Node {
 
     pub fn set_name(&self, name: &str) -> Result<()> {
         let name = name.trim();
-        if name.is_empty() || name.len() > 64 {
+        let chars = name.chars().count();
+        if chars == 0 || chars > 64 {
             return Err(Error::msg("имя должно быть от 1 до 64 символов"));
         }
         self.inner.with_store(|store| store.set_name(name))?;
