@@ -1,0 +1,194 @@
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
+use peerfold_core::Node;
+use serde::Deserialize;
+use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
+
+struct Quit(AtomicBool);
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct NameArgs {
+    name: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PausedArgs {
+    paused: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DeviceArgs {
+    device_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PathArgs {
+    path: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AttachArgs {
+    share_id: String,
+    path: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ShareArgs {
+    share_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RestoreArgs {
+    share_id: String,
+    rel_path: String,
+    hash: String,
+}
+
+#[tauri::command]
+fn state(node: State<'_, Node>) -> peerfold_core::Snapshot {
+    node.snapshot()
+}
+
+#[tauri::command]
+fn set_name(args: NameArgs, node: State<'_, Node>) -> Result<(), String> {
+    node.set_name(&args.name).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+fn set_paused(args: PausedArgs, node: State<'_, Node>) -> Result<(), String> {
+    node.set_paused(args.paused).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+fn trust(args: DeviceArgs, node: State<'_, Node>) -> Result<(), String> {
+    node.trust(&args.device_id).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+fn reject(args: DeviceArgs, node: State<'_, Node>) -> Result<(), String> {
+    node.reject(&args.device_id).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+fn forget(args: DeviceArgs, node: State<'_, Node>) -> Result<(), String> {
+    node.forget(&args.device_id).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+fn create_share(args: PathArgs, node: State<'_, Node>) -> Result<(), String> {
+    node.create_share(std::path::Path::new(&args.path))
+        .map(|_| ())
+        .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+fn attach_share(args: AttachArgs, node: State<'_, Node>) -> Result<(), String> {
+    node.attach_share(&args.share_id, std::path::Path::new(&args.path))
+        .map(|_| ())
+        .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+fn remove_share(args: ShareArgs, node: State<'_, Node>) -> Result<(), String> {
+    node.remove_share(&args.share_id).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+fn rescan(args: ShareArgs, node: State<'_, Node>) -> Result<(), String> {
+    node.rescan(&args.share_id).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+fn versions(args: ShareArgs, node: State<'_, Node>) -> Result<Vec<peerfold_core::VersionInfo>, String> {
+    node.versions(&args.share_id).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+fn restore(args: RestoreArgs, node: State<'_, Node>) -> Result<(), String> {
+    node.restore(&args.share_id, &args.rel_path, &args.hash)
+        .map_err(|err| err.to_string())
+}
+
+fn show_main(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    let quitting = Arc::new(Quit(AtomicBool::new(false)));
+    let quitting_setup = Arc::clone(&quitting);
+    tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .manage(quitting)
+        .setup(move |app| {
+            let data_dir = app.path().app_data_dir()?;
+            let node = Node::start(data_dir)?;
+            let handle = app.handle().clone();
+            node.set_on_change(move || {
+                let _ = handle.emit("state", ());
+            });
+            if let Some(window) = app.get_webview_window("main") {
+                let quitting = Arc::clone(&quitting_setup);
+                let hide = window.clone();
+                window.on_window_event(move |event| {
+                    if let WindowEvent::CloseRequested { api, .. } = event {
+                        if !quitting.0.load(Ordering::Relaxed) {
+                            api.prevent_close();
+                            let _ = hide.hide();
+                        }
+                    }
+                });
+            }
+            let show = tauri::menu::MenuItem::with_id(app, "show", "Открыть", true, None::<&str>)?;
+            let quit = tauri::menu::MenuItem::with_id(app, "quit", "Выход", true, None::<&str>)?;
+            let menu = tauri::menu::Menu::with_items(app, &[&show, &quit])?;
+            let mut tray = tauri::tray::TrayIconBuilder::new()
+                .menu(&menu)
+                .show_menu_on_left_click(true)
+                .on_menu_event(move |app, event| match event.id.as_ref() {
+                    "show" => show_main(app),
+                    "quit" => {
+                        if let Some(flag) = app.try_state::<Arc<Quit>>() {
+                            flag.0.store(true, Ordering::Relaxed);
+                        }
+                        app.exit(0);
+                    }
+                    _ => {}
+                });
+            if let Some(icon) = app.default_window_icon() {
+                tray = tray.icon(icon.clone());
+            }
+            let _ = tray.tooltip("PeerFold").build(app)?;
+            app.manage(node);
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            state,
+            set_name,
+            set_paused,
+            trust,
+            reject,
+            forget,
+            create_share,
+            attach_share,
+            remove_share,
+            rescan,
+            versions,
+            restore
+        ])
+        .run(tauri::generate_context!())
+        .expect("PeerFold не запустился");
+}
