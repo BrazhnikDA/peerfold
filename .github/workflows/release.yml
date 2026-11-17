@@ -1,4 +1,5 @@
 name: release
+# Windows and Linux installers via tauri-action.
 
 on:
   workflow_dispatch:
