@@ -4,6 +4,7 @@
 fn ipc_commands_match_frontend_keys() {
     let source = include_str!("../../../src-tauri/src/lib.rs");
     for signature in [
+        "fn choose_folder()",
         "fn set_name(name: String",
         "fn set_paused(paused: bool",
         "fn trust(device_id: String",

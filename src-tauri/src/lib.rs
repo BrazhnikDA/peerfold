@@ -6,6 +6,21 @@ use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 
 struct Quit(AtomicBool);
 
+/// Windows WebView2 freezes if the system folder dialog is owned by the
+/// window and opened off the UI thread. This picker has no parent window,
+/// so the click on «Выбрать папку» cannot stall the message loop.
+#[tauri::command]
+async fn choose_folder() -> Result<Option<String>, String> {
+    let picked = tauri::async_runtime::spawn_blocking(|| {
+        rfd::FileDialog::new()
+            .set_title("Выбрать папку")
+            .pick_folder()
+    })
+    .await
+    .map_err(|err| err.to_string())?;
+    Ok(picked.map(|path| path.to_string_lossy().into_owned()))
+}
+
 #[tauri::command]
 fn state(node: State<'_, Node>) -> peerfold_core::Snapshot {
     node.snapshot()
@@ -130,6 +145,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            choose_folder,
             state,
             set_name,
             set_paused,

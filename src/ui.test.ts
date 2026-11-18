@@ -137,7 +137,15 @@ async function boot(mode: "preview" | "app"): Promise<void> {
   }
 }
 
+function setUserAgent(value: string): void {
+  Object.defineProperty(navigator, "userAgent", {
+    configurable: true,
+    get: () => value,
+  });
+}
+
 beforeEach(() => {
+  setUserAgent("Mozilla/5.0 (X11; Linux x86_64)");
   invoke.mockReset();
   open.mockReset();
   invoke.mockImplementation(async (command: string) => {
@@ -276,6 +284,22 @@ describe("кнопки и поле имени", () => {
     const again = document.querySelector("#device-name");
     if (!(again instanceof HTMLInputElement)) throw new Error("поле пропало");
     expect(again.value).toBe("Кухня");
+  });
+
+  it("на Windows выбирает папку отдельной командой и не вешает окно", async () => {
+    setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+    invoke.mockImplementation(async (command: string) => {
+      if (command === "choose_folder") return "C:\\Users\\Kate\\Documents\\проект";
+      if (command === "state") return structuredClone(liveState);
+      return null;
+    });
+    await boot("preview");
+    button("Выбрать папку").click();
+    await vi.waitFor(() => {
+      expect(document.body.textContent).toContain("проект");
+    });
+    expect(invoke).toHaveBeenCalledWith("choose_folder");
+    expect(open).not.toHaveBeenCalled();
   });
 
   it("показывает пустые списки и ошибку недоступной папки", async () => {

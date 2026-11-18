@@ -291,8 +291,14 @@ function orderedVersions(): VersionInfo[] {
   return [...versions].sort((a, b) => toUnixSeconds(b.createdAt) - toUnixSeconds(a.createdAt));
 }
 
+function isWindows(): boolean {
+  return navigator.userAgent.includes("Windows");
+}
+
 async function pickFolder(): Promise<string | null> {
-  const picked = await open({ directory: true, multiple: false });
+  const picked = isWindows()
+    ? await invoke<string | null>("choose_folder")
+    : await open({ directory: true, multiple: false });
   if (typeof picked !== "string") return null;
   const path = picked.trim();
   return path.length > 0 ? path : null;
