@@ -13,7 +13,7 @@ use crate::blobs::BlobStore;
 use crate::error::{Error, Result};
 use crate::identity::{self, Identity};
 use crate::model::{now_ns, FileRec, ShareRow, Snapshot, VersionInfo};
-use crate::paths::safe_join;
+use crate::paths::{friendly_path, safe_join};
 use crate::protocol::Msg;
 use crate::scan::{remember, scan_share, set_mtime_ns};
 use crate::state::{writing_key, Inner};
@@ -277,7 +277,7 @@ impl Node {
     }
 
     fn add_share(&self, id: Option<String>, path: &Path) -> Result<ShareRow> {
-        let path = path.canonicalize().map_err(|_| Error::msg("папка не найдена"))?;
+        let path = friendly_path(&path.canonicalize().map_err(|_| Error::msg("папка не найдена"))?);
         if !path.is_dir() {
             return Err(Error::msg("нужна папка, не файл"));
         }
@@ -307,8 +307,17 @@ impl Node {
             path: path_text,
         };
         self.inner.with_store(|store| store.insert_share(&share))?;
+        self.inner
+            .share_status
+            .lock()
+            .expect("status")
+            .insert(share.id.clone(), "syncing".into());
         let _ = self.watch_tx.send(WatchCmd::Add(path));
-        self.scan_and_publish(&share.id)?;
+        let inner = Arc::clone(&self.inner);
+        let share_id = share.id.clone();
+        thread::spawn(move || {
+            let _ = scan_publish(&inner, &share_id);
+        });
         self.inner.announce_shares();
         let targets: Vec<_> = self
             .inner

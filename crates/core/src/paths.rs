@@ -21,6 +21,20 @@ pub fn safe_join(root: &Path, rel: &str) -> Result<PathBuf> {
     Ok(out)
 }
 
+pub fn friendly_path(path: &Path) -> PathBuf {
+    PathBuf::from(strip_extended_prefix(&path.to_string_lossy()))
+}
+
+pub fn strip_extended_prefix(text: &str) -> String {
+    if let Some(rest) = text.strip_prefix(r"\\?\UNC\") {
+        return format!(r"\\{rest}");
+    }
+    if let Some(rest) = text.strip_prefix(r"\\?\") {
+        return rest.to_string();
+    }
+    text.to_string()
+}
+
 pub fn is_transient(rel: &str) -> bool {
     rel.split('/').any(|p| p.ends_with(".peerfold-partial"))
 }
@@ -73,6 +87,19 @@ mod tests {
     fn joins_nested() {
         let path = safe_join(Path::new("/tmp/share"), "src/main.rs").unwrap();
         assert_eq!(path, PathBuf::from("/tmp/share/src/main.rs"));
+    }
+
+    #[test]
+    fn windows_extended_path_is_shown_normally() {
+        assert_eq!(
+            strip_extended_prefix(r"\\?\C:\Users\Kate\Documents\проект"),
+            r"C:\Users\Kate\Documents\проект"
+        );
+        assert_eq!(
+            strip_extended_prefix(r"\\?\UNC\nas\share\проект"),
+            r"\\nas\share\проект"
+        );
+        assert_eq!(strip_extended_prefix("/home/user/проект"), "/home/user/проект");
     }
 
     #[test]

@@ -1,6 +1,6 @@
 [package]
 name = "peerfold"
-version = "0.1.2"
+version = "0.1.3"
 description = "Синхронизация папок между своими компьютерами в локальной сети"
 authors = ["BrazhnikDA"]
 edition = "2024"

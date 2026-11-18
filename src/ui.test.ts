@@ -286,6 +286,26 @@ describe("кнопки и поле имени", () => {
     expect(again.value).toBe("Кухня");
   });
 
+  it("пока открыт выбор папки, кнопка показывает что программа отвечает", async () => {
+    let releasePicker: (path: string) => void = () => {};
+    open.mockImplementation(
+      () =>
+        new Promise<string>((resolvePicker) => {
+          releasePicker = resolvePicker;
+        }),
+    );
+    await boot("preview");
+    button("Выбрать папку").click();
+    await vi.waitFor(() => {
+      expect(document.body.textContent).toContain("Открываю…");
+    });
+    releasePicker("/tmp/проекты/агент");
+    await vi.waitFor(() => {
+      expect(document.body.textContent).toContain("агент");
+      expect(document.body.textContent).not.toContain("Открываю…");
+    });
+  });
+
   it("на Windows выбирает папку отдельной командой и не вешает окно", async () => {
     setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
     invoke.mockImplementation(async (command: string) => {

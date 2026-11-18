@@ -186,6 +186,7 @@ let section: Section = "folders";
 let selectedShareId: string | null = previewMode ? fixtureShareId : null;
 let error = "";
 let busy = false;
+let picking = false;
 let booted = previewMode;
 let nameDraft: string | null = null;
 let nameQueued = false;
@@ -453,14 +454,20 @@ async function forgetPeer(deviceId: string): Promise<void> {
 }
 
 async function chooseAndCreateShare(): Promise<void> {
+  if (picking || busy) return;
+  picking = true;
+  render();
   let path: string | null = null;
   try {
     path = await pickFolder();
   } catch (err) {
     error = pickerError(err);
+    picking = false;
     render();
     return;
   }
+  picking = false;
+  render();
   if (!path) return;
   const chosen = path;
   await run(async () => {
@@ -748,7 +755,7 @@ function renderFolders(): DocumentFragment {
   const addButton =
     snapshot.shares.length > 0
       ? actionButton(
-          "Выбрать папку",
+          picking ? "Открываю…" : "Выбрать папку",
           "btn btn-primary",
           () => {
             void chooseAndCreateShare();
@@ -783,7 +790,7 @@ function renderEmptyFolders(): HTMLElement {
     "Пока нет общих папок. Выберите папку проекта — она появится на других ваших компьютерах в этой сети.";
   panel.append(
     copy,
-    actionButton("Выбрать папку", "btn btn-primary", () => {
+    actionButton(picking ? "Открываю…" : "Выбрать папку", "btn btn-primary", () => {
       void chooseAndCreateShare();
     }, undefined, "create-share"),
   );
